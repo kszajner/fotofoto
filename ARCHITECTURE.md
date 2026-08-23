@@ -169,33 +169,38 @@ Trzeba przepuścić port przez Windows Firewall. `<input capture>` działa po HT
 
 ### Przygotowanie Pi — jednorazowo
 
-1. Raspberry Pi OS Lite **64-bit**
-2. Node 24 LTS z NodeSource — **ten sam major co na Windowsie**
-3. Użytkownik systemowy `fotofoto`, klucz SSH z Windowsa
-4. SSD/pendrive zamontowany na `/srv/fotofoto/data` (wpis w `/etc/fstab`)
-5. `/etc/fotofoto.env` z konfiguracją
-6. systemd unit `fotofoto.service`, `Restart=always`, `EnvironmentFile`
-7. `cloudflared` jako osobny serwis (dopiero w v1.0)
+Pełny runbook: [docs/PI-SETUP.md](docs/PI-SETUP.md). W skrócie: Raspberry Pi OS Lite
+64-bit, Node 24 z NodeSource, użytkownik `fotofoto`, SSD zamontowany na
+`/srv/fotofoto/data`, deploy key do prywatnego repo, unit systemd.
+`cloudflared` dochodzi dopiero w v1.0.
 
 ### Deploy
 
-Repo prywatne na GitHubie. Pi ciągnie z gita — nie wypychamy plików z Windowsa.
+Repo prywatne: `github.com/kszajner/fotofoto`. Pi **ciągnie z gita** przez deploy key
+(tylko odczyt) — nie wypychamy niczego z Windowsa.
 
-`deploy.ps1` z Windowsa robi po SSH:
+Cała automatyka deployu jest w bashu i **wykonuje się na Pi**, nie na laptopie.
+Na Windowsie tylko piszemy kod i pushujemy.
 
 ```
-git fetch && git checkout <tag>     # zawsze konkretny tag, nie "main"
-npm ci --omit=dev
-node scripts/migrate.js
-sudo systemctl restart fotofoto
-curl -f localhost:3000/healthz      # nie przechodzi -> automatyczny rollback
+./scripts/deploy.sh            # najnowszy tag
+./scripts/deploy.sh v0.3.0     # konkretny tag
 ```
 
-Każda wersja z tabeli powyżej dostaje **tag gita**. Rollback to `git checkout`
-poprzedniego taga + restart, czyli ~15 sekund. To jest plan awaryjny na wesele.
+Skrypt robi: `git fetch` → checkout taga → `npm ci --omit=dev` → migracje →
+`systemctl restart` → healthcheck. Gdy healthcheck nie przejdzie w 30 s,
+**sam cofa się na poprzedni commit**, przeinstalowuje zależności i restartuje.
+
+Każda wersja z tabeli powyżej dostaje **tag gita**. To jest plan awaryjny na wesele:
+rollback trwa kilkanaście sekund i nie wymaga myślenia.
 
 `data/` nie jest w gicie i deploy jej nie dotyka, więc rollback kodu nigdy nie
 zabierze zdjęć.
+
+**Rollback cofa kod, nie schemat bazy.** Dlatego migracje piszemy wyłącznie
+addytywnie: nowe tabele, nowe kolumny z wartością domyślną. Nigdy `DROP COLUMN`
+ani zmiany typu — inaczej cofnięcie kodu zostawi starą aplikację przy nowym
+schemacie.
 
 ---
 

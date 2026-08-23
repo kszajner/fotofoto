@@ -1,0 +1,42 @@
+[Unit]
+Description=fotofoto — gra weselna
+After=network-online.target
+Wants=network-online.target
+
+# Bez tego, gdyby dysk z danymi się nie zamontował, aplikacja wystartowałaby
+# i zaczęła zapisywać zdjęcia na kartę SD — po cichu, wyglądając na zdrową.
+# RequiresMountsFor każe systemd odmówić startu, gdy montowania nie ma.
+RequiresMountsFor=/srv/fotofoto/data
+
+[Service]
+Type=simple
+User=fotofoto
+Group=fotofoto
+WorkingDirectory=/srv/fotofoto/app
+EnvironmentFile=/etc/fotofoto.env
+ExecStart=/usr/bin/node src/server.js
+
+# Autostart po zaniku prądu i po każdym crashu.
+Restart=always
+RestartSec=3
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# ProtectSystem=strict czyni cały system plików tylko-do-odczytu.
+# Jedyne miejsce, gdzie aplikacja ma prawo pisać, to katalog z danymi —
+# katalog z kodem pozostaje niezapisywalny dla procesu aplikacji.
+ReadWritePaths=/srv/fotofoto/data
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fotofoto
+
+[Install]
+WantedBy=multi-user.target

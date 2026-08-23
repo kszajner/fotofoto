@@ -1,0 +1,17 @@
+# Pracujemy na Windowsie, wdrażamy na Linuksie. Bez tego pliku końce linii
+# zależałyby od ustawienia core.autocrlf na konkretnej maszynie, a skrypt
+# powłoki z CRLF wywala się na Pi jako "bad interpreter: /bin/bash^M".
+
+* text=auto eol=lf
+
+*.sh      text eol=lf
+*.service text eol=lf
+*.sql     text eol=lf
+
+*.ps1 text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.db binary

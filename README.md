@@ -54,10 +54,22 @@ data/                  baza i zdjęcia — poza repo, na Pi osobny wolumen
 Zmienne z `.env.example`. W devie działają domyślne, `.env` nie jest wymagany.
 Na Pi trafiają do `/etc/fotofoto.env` (`EnvironmentFile` w systemd).
 
-## Stan: v0.1
+## Deploy na Pi
+
+Cała automatyka deployu jest w bashu i **odpala się na Pi**, nie na Windowsie.
+Jednorazowe przygotowanie maszyny: [docs/PI-SETUP.md](docs/PI-SETUP.md).
+
+```
+./scripts/deploy.sh            # najnowszy tag
+./scripts/deploy.sh v0.2.0     # konkretny tag
+```
+
+Gdy healthcheck nie przejdzie w 30 s, skrypt sam cofa się na poprzedni commit.
+
+## Stan: v0.2
 
 Jest: szkielet serwera, SQLite z migracjami, `/api/tasks`, `/healthz`, statyczny front
-listujący zadania.
+listujący zadania, unit systemd i skrypt deployu z auto-rollbackiem.
 
 Nie ma jeszcze: uploadu zdjęć (v0.3), gości i rozgrywki (v0.4), galerii i admina (v0.5).
 Zadania w bazie to placeholdery z migracji `002_seed_tasks.sql`.
