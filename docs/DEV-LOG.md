@@ -33,11 +33,22 @@ streaming na dysk, worker miniatur. Test z prawdziwego iPhone'a i Androida.
       **Ryzyko HEIC z §9 rozbrojone**: `orientation exif: undefined` na zapisanym oryginale —
       Safari/canvas wypieka poprawną orientację przy rysowaniu z aparatu, `toBlob` daje czysty JPEG.
       Zero błędów w logu.
-- [ ] Test z prawdziwego Androida — **właściciel ma tylko iPhone'a, brak urządzenia Android pod ręką**.
-      Ryzyko niższe niż iPhone (Android zwykle oddaje JPEG wprost, bez HEIC), ale niezweryfikowane.
-      **Decyzja 2026-08-23: v0.3 zostaje otwarte, czekamy na dostęp do Androida** (np. pożyczony
-      telefon) zamiast tagować teraz. Kod jest gotowy i działa — blokerem jest wyłącznie test.
-- [ ] Tag `v0.3.0`, wpis w `ARCHITECTURE.md`/`README.md` o stanie — dopiero po teście Androida
+- [x] **Test z prawdziwego Androida** — 2026-08-23, przez LAN (`192.168.1.24` → dev-serwer
+      na `192.168.1.32:3001`). Zdjęcie 1536×2048, 350KB, HTTP 201, miniatura się wygenerowała
+      poprawnie (480×640 webp). Zero błędów w logu.
+- [x] Tag `v0.3.0`, wpis w `README.md` o stanie
+
+## v0.3 zamknięte — 2026-08-23
+
+Oba testy na prawdziwych telefonach (iPhone przez WireGuard, Android przez LAN) przeszły
+bez błędów. Upload end-to-end działa: resize w przeglądarce, streaming multipart na dysk,
+worker miniatur. Ryzyko HEIC z §9 ARCHITECTURE.md rozbrojone.
+
+## Następny krok
+
+v0.4 z planu (ARCHITECTURE.md §7): gra — model gościa/zadań w UI, wybór zadania,
+przypisanie zdjęć, CRUD zadań w panelu admina (dziś zadania to placeholdery
+z migracji `002_seed_tasks.sql`).
 
 ## Jak przetestować z telefonu (do zrobienia przez Ciebie)
 

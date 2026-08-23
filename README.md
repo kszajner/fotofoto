@@ -66,10 +66,14 @@ Jednorazowe przygotowanie maszyny: [docs/PI-SETUP.md](docs/PI-SETUP.md).
 
 Gdy healthcheck nie przejdzie w 30 s, skrypt sam cofa się na poprzedni commit.
 
-## Stan: v0.2
+## Stan: v0.3
 
-Jest: szkielet serwera, SQLite z migracjami, `/api/tasks`, `/healthz`, statyczny front
-listujący zadania, unit systemd i skrypt deployu z auto-rollbackiem.
+Jest: szkielet serwera, SQLite z migracjami, `/api/tasks`, `/healthz`, unit systemd i
+skrypt deployu z auto-rollbackiem (v0.2) — oraz upload zdjęć end-to-end (v0.3):
+identyfikacja gościa (cookie), zgłoszenia, streaming multipart na dysk, walidacja
+magic bytes, resize w przeglądarce (canvas → JPEG), worker miniatur (sharp → webp).
+Zweryfikowane na prawdziwym iPhonie i Androidzie — patrz `docs/DEV-LOG.md`.
 
-Nie ma jeszcze: uploadu zdjęć (v0.3), gości i rozgrywki (v0.4), galerii i admina (v0.5).
-Zadania w bazie to placeholdery z migracji `002_seed_tasks.sql`.
+Nie ma jeszcze: właściwej gry (wybór zadania w UI, przypisanie zdjęć, ranking) i
+CRUD zadań w adminie (v0.4), galerii z miniaturkami i eksportu (v0.5).
+Zadania w bazie to wciąż placeholdery z migracji `002_seed_tasks.sql`.
