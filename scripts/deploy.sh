@@ -33,7 +33,9 @@ wait_for_health() {
 say "pobieram zmiany"
 git fetch --tags --prune origin
 
-REF="${1:-$(git tag --sort=-v:refname | head -n1)}"
+# Celowo bez `git tag | head -1`: przy `set -o pipefail` head zamyka potok,
+# git dostaje SIGPIPE i cały skrypt przewraca się na kodzie 141.
+REF="${1:-$(git for-each-ref --sort=-v:refname --format='%(refname:short)' --count=1 refs/tags)}"
 if [[ -z "$REF" ]]; then
   fail "brak tagów w repo — podaj ref jawnie: ./scripts/deploy.sh <tag>"
   exit 1

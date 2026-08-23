@@ -27,7 +27,10 @@ ProtectHome=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# AF_NETLINK jest konieczny: glibc odpytuje przez netlink listę interfejsów
+# przy rozwiązywaniu nazw. Bez niego Node potrafi się wywalić na DNS-ie
+# w sposób kompletnie niezwiązany z objawami.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
 
 # ProtectSystem=strict czyni cały system plików tylko-do-odczytu.
 # Jedyne miejsce, gdzie aplikacja ma prawo pisać, to katalog z danymi —

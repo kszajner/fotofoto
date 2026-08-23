@@ -55,8 +55,13 @@ lsblk -f
 Dopisz do `/etc/fstab` (podstaw swój UUID):
 
 ```
-UUID=xxxx-xxxx  /srv/fotofoto/data  ext4  defaults,noatime  0  2
+UUID=xxxx-xxxx  /srv/fotofoto/data  ext4  defaults,noatime,nofail,x-systemd.device-timeout=10  0  2
 ```
+
+`nofail` jest tu kluczowe. Bez niego Pi bez podłączonego dysku nie kończy bootowania,
+tylko wpada w tryb ratunkowy — czyli **nie wstaje SSH i musisz iść do niego fizycznie**.
+Z `nofail` system wstaje normalnie, usługa odmawia startu (`RequiresMountsFor`),
+a Ty możesz się zalogować i naprawić.
 
 ```bash
 sudo mount -a
@@ -74,6 +79,8 @@ sudo chown -R fotofoto:fotofoto /srv/fotofoto/data
 Klucz **tylko do odczytu**, osobny dla tej maszyny:
 
 ```bash
+sudo -u fotofoto mkdir -p /srv/fotofoto/.ssh
+sudo -u fotofoto chmod 700 /srv/fotofoto/.ssh
 sudo -u fotofoto ssh-keygen -t ed25519 -N "" -f /srv/fotofoto/.ssh/id_ed25519 -C "rpi-fotofoto"
 sudo -u fotofoto cat /srv/fotofoto/.ssh/id_ed25519.pub
 ```
@@ -129,10 +136,13 @@ sudo visudo -c
 ## 7. Pierwszy deploy
 
 ```bash
-sudo -u fotofoto -H bash -c 'cd /srv/fotofoto/app && ./scripts/deploy.sh v0.1.0'
+sudo -u fotofoto -H bash -c 'cd /srv/fotofoto/app && ./scripts/deploy.sh v0.2.0'
 ```
 
-Powinno skończyć się na `deploy ok — v0.1.0` i wypisać JSON z healthchecka.
+Powinno skończyć się na `deploy ok — v0.2.0` i wypisać JSON z healthchecka.
+
+Nie wdrażaj tagu starszego niż `v0.2.0`: `deploy.sh` pojawił się dopiero w v0.2,
+więc checkout v0.1.0 usunąłby skrypt spod bash-a w trakcie jego wykonywania.
 
 Weryfikacja:
 
