@@ -1,0 +1,15 @@
+node_modules/
+
+# Dane produkcyjne i deweloperskie — nigdy w repo.
+# Na Pi to jest osobny wolumen (/srv/fotofoto/data), deploy go nie dotyka.
+data/
+
+.env
+*.log
+npm-debug.log*
+
+# Lokalne ustawienia Claude Code (per-maszyna)
+.claude/settings.local.json
+
+.DS_Store
+Thumbs.db
