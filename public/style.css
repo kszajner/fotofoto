@@ -196,6 +196,50 @@ body {
   color: #b3453a;
 }
 
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.6rem;
+  max-width: 60rem;
+  margin: 0 auto 1.5rem;
+}
+
+.photo-card {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.photo-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+.photo-card figcaption {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.load-more {
+  display: block;
+  margin: 0 auto 2rem;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
 .foot {
   max-width: 34rem;
   margin: 2.5rem auto 0;

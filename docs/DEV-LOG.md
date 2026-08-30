@@ -110,10 +110,49 @@ Drugi test na telefonie (czysty stan) przeszedł bez zarzutu: front pokazuje
 "Zrobione ✓" po uploadzie, panel admina pokazuje dokładnie 9 zadań, bez duchów.
 Tag `v0.4.0`, deploy na Pi.
 
+## v0.5 w toku — 2026-08-30
+
+- [x] `src/routes/media.js` — `GET /media/thumb/:id.webp`, `GET /media/original/:id.jpg`,
+      walidacja id po wzorcu UUID (ochrona przed path traversal), `nosniff`,
+      cache-control długi (pliki są niemutowalne — nazwa to UUID)
+- [x] `src/routes/feed.js` — `GET /api/feed?cursor=`, paginacja keyset po
+      `(created_at, id)` zamiast OFFSET — stabilna mimo nowych zdjęć w trakcie
+      przewijania. Przetestowane na 26 zdjęciach: dwie strony, zero duplikatów.
+- [x] `src/routes/admin.js` — `GET /api/admin/photos`, `POST /api/admin/photos/:id/hide`
+      (przełącza `submissions.status`, nie dotyka schematu), `GET /api/admin/export.zip`
+- [x] Publiczna galeria: `public/feed.html` + `feed.js`, link z `index.html`
+- [x] Panel admina: sekcja "Zdjęcia" z podglądem, przyciskiem ukryj/pokaż,
+      linkiem do eksportu ZIP
+
+### Napotkane i naprawione po drodze
+
+- `archiver` w `package.json` to od razu **v8** — inne API niż klasyczne
+  tutoriale (`new ZipArchive(opts)`, nie `archiver('zip', opts)`).
+- **Prawdziwy bug**: `reply.send(archive)` + `archive.finalize()` bez
+  `await` dawało poprawny `200 application/zip`, ale **0 bajtów** — Fastify
+  kończył odpowiedź, zanim archiwum zdążyło coś wypchnąć. Naprawione przez
+  `await archive.finalize()` na końcu handlera (kolejność ważna: `reply.send`
+  musi podpiąć konsumenta PRZED finalize, inaczej przy dużym eksporcie
+  groziłby deadlock na buforze strumienia).
+- Syntetyczne "zdjęcia" testowe muszą być prawdziwym JPEG-iem (np. z PIL) —
+  same magic bytes przechodzą upload, ale `sharp` nie zrobi z tego miniatury
+  (worker zapętla się w błędzie, zgodnie z zamierzeniem — cichy brak
+  miniatury byłby gorszy).
+
+### v0.5 zamknięte — 2026-08-30
+
+Test na telefonie przeszedł bez zarzutu: galeria, ukrywanie, eksport ZIP.
+Hasło do `/admin` (dev i produkcja) ustawione na "ricky" na czas testów —
+**do zmiany na coś mocniejszego przed v1.0**, kiedy panel wyjdzie do internetu
+przez Cloudflare Tunnel. Tag `v0.5.0`, deploy na Pi.
+
 ## Następny krok
 
-v0.5 z planu (ARCHITECTURE.md §7): feed z miniaturkami, ukrywanie zdjęć,
-eksport ZIP w panelu admina.
+v0.6 z planu (ARCHITECTURE.md §7): odporność — kolejka offline w IndexedDB
++ retry (na wypadek słabego zasięgu), rate limity per IP, cron backup na
+drugi nośnik. To też moment, żeby dorzucić realny rate limit uploadu, o który
+pytał użytkownik przy v0.4 (dziś: 20MB/plik + 100 zgłoszeń/gość/dobę, bez
+limitu per IP i bez twardego capa na miejsce na dysku).
 
 ## Jak przetestować z telefonu (do zrobienia przez Ciebie)
 

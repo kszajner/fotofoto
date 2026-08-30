@@ -142,3 +142,65 @@ main {
 .save-status.error {
   color: #b3453a;
 }
+
+.photos-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.photos-heading a {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 0.6rem;
+  margin: 0 0 2rem;
+}
+
+.photo-grid .photo-card {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.photo-grid.inactive,
+.photo-card.inactive {
+  opacity: 0.5;
+}
+
+.photo-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+.photo-card figcaption {
+  padding: 0.35rem 0.5rem 0;
+  font-size: 0.6875rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.photo-card button {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.35rem;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 0.75rem;
+  cursor: pointer;
+}

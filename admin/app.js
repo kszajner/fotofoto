@@ -189,5 +189,62 @@ function renderNewTaskForm() {
   });
 }
 
+const photosEl = document.querySelector('#photos');
+
+function photoCard(photo) {
+  const figure = document.createElement('figure');
+  figure.className = 'photo-card';
+  if (photo.status === 'hidden') figure.classList.add('inactive');
+
+  const img = document.createElement('img');
+  img.loading = 'lazy';
+  img.src = `/media/thumb/${photo.photo_id}.webp`;
+  img.alt = photo.task_title;
+
+  const caption = document.createElement('figcaption');
+  caption.textContent = `${photo.task_title} — ${photo.guest_name}`;
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.textContent = photo.status === 'hidden' ? 'Pokaż' : 'Ukryj';
+
+  toggle.addEventListener('click', async () => {
+    toggle.disabled = true;
+    const hidden = photo.status !== 'hidden';
+    try {
+      const res = await fetch(`/api/admin/photos/${photo.photo_id}/hide`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hidden }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      photo.status = hidden ? 'hidden' : 'ok';
+      figure.classList.toggle('inactive', hidden);
+      toggle.textContent = hidden ? 'Pokaż' : 'Ukryj';
+    } catch (err) {
+      toggle.textContent = `Błąd: ${err.message}`;
+    } finally {
+      toggle.disabled = false;
+    }
+  });
+
+  figure.append(img, caption, toggle);
+  return figure;
+}
+
+async function loadPhotos() {
+  try {
+    const res = await fetch('/api/admin/photos');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const photos = await res.json();
+    photosEl.replaceChildren(
+      ...(photos.length ? photos.map(photoCard) : [stateMessage('Jeszcze brak zdjęć.')]),
+    );
+  } catch (err) {
+    photosEl.replaceChildren(stateMessage(`Nie udało się pobrać zdjęć: ${err.message}`));
+  }
+}
+
 renderNewTaskForm();
 loadTasks();
+loadPhotos();

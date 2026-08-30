@@ -11,6 +11,8 @@ import taskRoutes from './routes/tasks.js';
 import guestRoutes from './routes/guest.js';
 import submissionRoutes from './routes/submissions.js';
 import adminRoutes from './routes/admin.js';
+import feedRoutes from './routes/feed.js';
+import mediaRoutes from './routes/media.js';
 import { startThumbnailWorker } from './workers/thumbnails.js';
 
 const app = Fastify({
@@ -34,6 +36,8 @@ await app.register(taskRoutes);
 await app.register(guestRoutes);
 await app.register(submissionRoutes);
 await app.register(adminRoutes);
+await app.register(feedRoutes);
+await app.register(mediaRoutes);
 
 const stopThumbnailWorker = startThumbnailWorker(app.log);
 

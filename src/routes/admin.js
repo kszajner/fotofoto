@@ -1,9 +1,16 @@
 import path from 'node:path';
+import { ZipArchive } from 'archiver';
 import fastifyBasicAuth from '@fastify/basic-auth';
 import fastifyStatic from '@fastify/static';
 
 import { getDb } from '../db/index.js';
-import { config } from '../config.js';
+import { config, paths } from '../config.js';
+
+// Zip zawiera oryginały (nie miniatury) w folderach per zadanie — to jest
+// eksport "dla pary młodej", nie kolejny mechanizm serwowania do przeglądarki.
+function sanitizeSegment(str) {
+  return String(str).replace(/[\\/:*?"<>|]/g, '_').trim() || '_';
+}
 
 function validate(username, password, req, reply, done) {
   if (username === config.adminUser && password === config.adminPass) return done();
@@ -115,6 +122,65 @@ export default async function adminRoutes(app) {
         )
         .run(merged);
       return getDb().prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+    });
+
+    scoped.get('/api/admin/photos', async () => {
+      return getDb()
+        .prepare(
+          `SELECT p.id AS photo_id, p.thumb_ready, p.width, p.height, p.created_at,
+                  s.status, t.title AS task_title, g.name AS guest_name
+             FROM photos p
+             JOIN submissions s ON s.id = p.submission_id
+             JOIN tasks t ON t.id = s.task_id
+             JOIN guests g ON g.id = s.guest_id
+            ORDER BY p.created_at DESC`,
+        )
+        .all();
+    });
+
+    scoped.post('/api/admin/photos/:id/hide', async (req, reply) => {
+      const db = getDb();
+      const photo = db.prepare('SELECT id, submission_id FROM photos WHERE id = ?').get(req.params.id);
+      if (!photo) return reply.code(404).send({ error: 'nieznane zdjęcie' });
+
+      const hidden = req.body?.hidden === undefined ? true : Boolean(req.body.hidden);
+      db.prepare('UPDATE submissions SET status = ? WHERE id = ?').run(
+        hidden ? 'hidden' : 'ok',
+        photo.submission_id,
+      );
+      return { photo_id: photo.id, hidden };
+    });
+
+    scoped.get('/api/admin/export.zip', async (req, reply) => {
+      const rows = getDb()
+        .prepare(
+          `SELECT p.id AS photo_id, t.title AS task_title, g.name AS guest_name
+             FROM photos p
+             JOIN submissions s ON s.id = p.submission_id
+             JOIN tasks t ON t.id = s.task_id
+             JOIN guests g ON g.id = s.guest_id
+            ORDER BY p.created_at`,
+        )
+        .all();
+
+      reply.header('content-type', 'application/zip');
+      reply.header('content-disposition', `attachment; filename="fotofoto-export.zip"`);
+
+      const archive = new ZipArchive({ zlib: { level: 6 } });
+      archive.on('error', (err) => req.log.error({ err }, 'export zip: błąd archiwizacji'));
+      reply.send(archive);
+
+      for (const row of rows) {
+        const folder = sanitizeSegment(row.task_title);
+        const name = `${sanitizeSegment(row.guest_name)}_${row.photo_id.slice(0, 8)}.jpg`;
+        archive.file(path.join(paths.originals, `${row.photo_id}.jpg`), { name: `${folder}/${name}` });
+      }
+      // Musimy czekać na finalize (nie fire-and-forget) — inaczej handler
+      // wraca, zanim archiver zdąży cokolwiek wypchnąć, i fastify zamyka
+      // odpowiedź jako pustą. reply.send(archive) już podpięło konsumenta,
+      // więc to nie blokuje na buforze (bez tego groziłby deadlock przy
+      // dużym eksporcie, gdyby nikt jeszcze nie czytał strumienia).
+      await archive.finalize();
     });
   });
 }

@@ -66,13 +66,11 @@ Jednorazowe przygotowanie maszyny: [docs/PI-SETUP.md](docs/PI-SETUP.md).
 
 Gdy healthcheck nie przejdzie w 30 s, skrypt sam cofa się na poprzedni commit.
 
-## Stan: v0.4
+## Stan: v0.5
 
-Jest wszystko z v0.3 (szkielet, deploy z rollbackiem, upload zdjęć end-to-end) —
-oraz gra (v0.4): 9 prawdziwych zadań w bazie (`003_real_tasks.sql`, placeholdery
-usunięte w `004_drop_placeholder_tasks.sql`), panel `/admin` z CRUD-em zadań za
-basic auth (`ADMIN_USER`/`ADMIN_PASS`), front pokazuje "Zrobione ✓" przy zadaniu,
-do którego gość już wysłał zdjęcie. Zweryfikowane na telefonie przez VPN.
+Jest wszystko z v0.4 (gra, panel admina z CRUD zadań) — oraz galeria (v0.5):
+publiczny feed z miniaturkami (`/feed.html`, paginacja keyset), serwowanie
+`/media/thumb/:id.webp` i `/media/original/:id.jpg`, ukrywanie zdjęć i eksport
+ZIP w panelu admina (foldery per zadanie). Zweryfikowane na telefonie.
 
-Nie ma jeszcze: galerii z miniaturkami, ukrywania zdjęć i eksportu (v0.5),
-kolejki offline i backupu (v0.6), Cloudflare Tunnel/domeny (v1.0).
+Nie ma jeszcze: kolejki offline i backupu (v0.6), Cloudflare Tunnel/domeny (v1.0).
