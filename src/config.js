@@ -15,6 +15,10 @@ export const config = {
   // Bezwzględny DATA_DIR (Pi: /srv/fotofoto/data) zostaje jak jest,
   // względny (dev na Windowsie) liczy się od katalogu projektu.
   dataDir: path.resolve(rootDir, process.env.DATA_DIR ?? 'data'),
+  // Basic auth do /admin. Domyślne dane logowania działają tylko lokalnie
+  // (patrz sprawdzenie w server.js) — na Pi trzeba je ustawić w /etc/fotofoto.env.
+  adminUser: process.env.ADMIN_USER ?? 'admin',
+  adminPass: process.env.ADMIN_PASS ?? 'admin',
 };
 
 export const paths = {

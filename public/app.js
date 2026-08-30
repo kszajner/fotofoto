@@ -118,6 +118,26 @@ function taskCard(task) {
   const label = document.createElement('label');
   label.className = 'shoot-btn';
   label.textContent = 'Zrób zdjęcie';
+  label.hidden = Boolean(task.done);
+
+  const done = document.createElement('div');
+  done.className = 'done-row';
+  done.hidden = !task.done;
+
+  const doneBadge = document.createElement('span');
+  doneBadge.className = 'done-badge';
+  doneBadge.textContent = 'Zrobione ✓';
+
+  const redo = document.createElement('button');
+  redo.type = 'button';
+  redo.className = 'redo-btn';
+  redo.textContent = 'jeszcze raz';
+  redo.addEventListener('click', () => {
+    done.hidden = true;
+    label.hidden = false;
+  });
+
+  done.append(doneBadge, redo);
 
   const input = document.createElement('input');
   input.type = 'file';
@@ -163,6 +183,8 @@ function taskCard(task) {
       }
 
       status.textContent = 'Wysłano! Dzięki 🎉';
+      label.hidden = true;
+      done.hidden = false;
     } catch (err) {
       status.classList.add('error');
       status.textContent = `Nie udało się: ${err.message}`;
@@ -171,7 +193,7 @@ function taskCard(task) {
     }
   });
 
-  article.append(title, desc, points, label, status);
+  article.append(title, desc, points, label, done, status);
   return article;
 }
 

@@ -50,6 +50,71 @@ v0.4 z planu (ARCHITECTURE.md §7): gra — model gościa/zadań w UI, wybór za
 przypisanie zdjęć, CRUD zadań w panelu admina (dziś zadania to placeholdery
 z migracji `002_seed_tasks.sql`).
 
+## Docelowa treść zadań (ustalone 2026-08-30)
+
+Realna lista zadań gry, do wpisania przez panel admina (v0.4), zastąpi placeholdery
+z `002_seed_tasks.sql`:
+
+1. Twoje zdjęcie
+2. Zdjęcie z kimś, kogo nie znasz
+3. Zdjęcie stołu i jedzenia
+4. Selfie z kimś starszym/młodszym o co najmniej 10 lat
+5. Zdjęcie sali
+6. Zdjęcie w co najmniej 5 osób
+7. Zdjęcie pary młodej z tortem
+8. Zdjęcie z parą młodą
+9. Zdjęcie pary młodej w trakcie aktywności
+
+Punktacja i dokładne opisy do doprecyzowania przy budowie CRUD-a.
+
+## v0.4 w toku — 2026-08-30
+
+- [x] Migracja `003_real_tasks.sql` — dezaktywuje 5 placeholderów, wstawia 9 realnych
+      zadań (po 1 pkt, do zmiany z admina). Idempotentna, dopasowanie po `title`.
+- [x] `@fastify/basic-auth` — panel `/admin` i `/api/admin/*` za basic auth
+      (`ADMIN_USER`/`ADMIN_PASS` w env, domyślnie `admin`/`admin` tylko dev —
+      start loguje ostrzeżenie, jeśli zostaną domyślne)
+- [x] `src/routes/admin.js` — `GET/POST /api/admin/tasks`, `PATCH /api/admin/tasks/:id`
+      (walidacja: title wymagany, points/sort_order całkowite, rozróżnienie
+      "pole nieobecne" od "pole=false" — złapany i naprawiony bug przy testach curl)
+- [x] `admin/index.html`, `admin/app.js`, `admin/style.css` — osobny katalog
+      (NIE `public/`, żeby fastifyStatic nie serwował go bez auth), prosty CRUD
+- [x] `GET /api/tasks` zwraca teraz `done` per gość (na podstawie cookie) —
+      "zrobione" = ma choć jedno zdjęcie wysłane do zadania, nie sam submission
+- [x] `public/app.js` — karta zadania pokazuje "Zrobione ✓" + link "jeszcze raz"
+      zamiast przycisku, gdy `done: true`
+- [x] Testy curl: zadania publiczne, gating admina (401/401/200), CRUD (POST/PATCH),
+      walidacja pustego tytułu, pełny przepływ gość→zgłoszenie→upload→`done:true`
+      — wszystko zielone na dev-serwerze (`/tmp/fotofoto-dev-data`)
+
+### Test na telefonie — 2026-08-30
+
+- Upload zdjęcia (VPN, iPhone): działa, 1536×2048 JPEG, task "Twoje zdjęcie",
+  miniatura wygenerowana poprawnie.
+- **Bug 1**: `GET /admin` (bez końcowego `/`) dawał 404 JSON zamiast strony —
+  telefon próbował to zapisać jako plik `admin.json`. `redirect: true` w
+  `@fastify/static` łapie tylko podkatalogi, nie sam prefiks. Naprawione
+  jawnym `scoped.get('/admin', ...) => reply.redirect('/admin/')`.
+- **Bug 2**: stare placeholdery z `002_seed_tasks.sql` (dezaktywowane w `003`)
+  zostały w tabeli w tym samym zakresie `sort_order` co realne zadania —
+  w panelu admina łatwo trafić w niewłaściwy wiersz. Faktycznie się zdarzyło:
+  PATCH przypadkiem trafił w id 1 ("Selfie z Parą Młodą") zamiast id 13
+  ("Zdjęcie z parą młodą"), reaktywując stary placeholder jako duplikat
+  na liście gościa. Naprawione strukturalnie migracją `004_drop_placeholder_tasks.sql`
+  (usuwa placeholdery na stałe — bezpieczne, zero submissions na produkcji
+  wskazywało na te id).
+
+### v0.4 zamknięte — 2026-08-30
+
+Drugi test na telefonie (czysty stan) przeszedł bez zarzutu: front pokazuje
+"Zrobione ✓" po uploadzie, panel admina pokazuje dokładnie 9 zadań, bez duchów.
+Tag `v0.4.0`, deploy na Pi.
+
+## Następny krok
+
+v0.5 z planu (ARCHITECTURE.md §7): feed z miniaturkami, ukrywanie zdjęć,
+eksport ZIP w panelu admina.
+
 ## Jak przetestować z telefonu (do zrobienia przez Ciebie)
 
 Telefon musi być w tej samej sieci Wi-Fi co Pi (`192.168.1.32`).

@@ -10,6 +10,7 @@ import healthRoutes from './routes/health.js';
 import taskRoutes from './routes/tasks.js';
 import guestRoutes from './routes/guest.js';
 import submissionRoutes from './routes/submissions.js';
+import adminRoutes from './routes/admin.js';
 import { startThumbnailWorker } from './workers/thumbnails.js';
 
 const app = Fastify({
@@ -21,6 +22,10 @@ const app = Fastify({
 // ruch na niezgodnym schemacie.
 migrate({ log: (msg) => app.log.info(msg) });
 
+if (config.adminUser === 'admin' && config.adminPass === 'admin') {
+  app.log.warn('ADMIN_USER/ADMIN_PASS nieustawione — panel /admin używa domyślnych danych logowania');
+}
+
 await app.register(fastifyCookie);
 await app.register(fastifyMultipart, { attachFieldsToBody: false });
 await app.register(fastifyStatic, { root: config.publicDir, index: 'index.html' });
@@ -28,6 +33,7 @@ await app.register(healthRoutes);
 await app.register(taskRoutes);
 await app.register(guestRoutes);
 await app.register(submissionRoutes);
+await app.register(adminRoutes);
 
 const stopThumbnailWorker = startThumbnailWorker(app.log);
 

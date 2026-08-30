@@ -66,14 +66,13 @@ Jednorazowe przygotowanie maszyny: [docs/PI-SETUP.md](docs/PI-SETUP.md).
 
 Gdy healthcheck nie przejdzie w 30 s, skrypt sam cofa się na poprzedni commit.
 
-## Stan: v0.3
+## Stan: v0.4
 
-Jest: szkielet serwera, SQLite z migracjami, `/api/tasks`, `/healthz`, unit systemd i
-skrypt deployu z auto-rollbackiem (v0.2) — oraz upload zdjęć end-to-end (v0.3):
-identyfikacja gościa (cookie), zgłoszenia, streaming multipart na dysk, walidacja
-magic bytes, resize w przeglądarce (canvas → JPEG), worker miniatur (sharp → webp).
-Zweryfikowane na prawdziwym iPhonie i Androidzie — patrz `docs/DEV-LOG.md`.
+Jest wszystko z v0.3 (szkielet, deploy z rollbackiem, upload zdjęć end-to-end) —
+oraz gra (v0.4): 9 prawdziwych zadań w bazie (`003_real_tasks.sql`, placeholdery
+usunięte w `004_drop_placeholder_tasks.sql`), panel `/admin` z CRUD-em zadań za
+basic auth (`ADMIN_USER`/`ADMIN_PASS`), front pokazuje "Zrobione ✓" przy zadaniu,
+do którego gość już wysłał zdjęcie. Zweryfikowane na telefonie przez VPN.
 
-Nie ma jeszcze: właściwej gry (wybór zadania w UI, przypisanie zdjęć, ranking) i
-CRUD zadań w adminie (v0.4), galerii z miniaturkami i eksportu (v0.5).
-Zadania w bazie to wciąż placeholdery z migracji `002_seed_tasks.sql`.
+Nie ma jeszcze: galerii z miniaturkami, ukrywania zdjęć i eksportu (v0.5),
+kolejki offline i backupu (v0.6), Cloudflare Tunnel/domeny (v1.0).

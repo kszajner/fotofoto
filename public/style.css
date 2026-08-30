@@ -159,6 +159,32 @@ body {
   pointer-events: none;
 }
 
+.done-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.done-badge {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #4a8f5c 16%, transparent);
+  color: #4a8f5c;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.redo-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .upload-status {
   margin: 0.6rem 0 0;
   padding: 0;
