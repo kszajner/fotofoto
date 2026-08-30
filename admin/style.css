@@ -22,6 +22,13 @@
   box-sizing: border-box;
 }
 
+/* Patrz public/style.css — klasy z jawnym `display` nadpisują atrybut
+   hidden przy równej specyficzności; !important gwarantuje, że hidden
+   zawsze wygrywa. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   padding: 0 1.25rem 3rem;

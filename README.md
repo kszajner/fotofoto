@@ -66,11 +66,15 @@ Jednorazowe przygotowanie maszyny: [docs/PI-SETUP.md](docs/PI-SETUP.md).
 
 Gdy healthcheck nie przejdzie w 30 s, skrypt sam cofa się na poprzedni commit.
 
-## Stan: v0.5
+## Stan: v0.6
 
-Jest wszystko z v0.4 (gra, panel admina z CRUD zadań) — oraz galeria (v0.5):
-publiczny feed z miniaturkami (`/feed.html`, paginacja keyset), serwowanie
-`/media/thumb/:id.webp` i `/media/original/:id.jpg`, ukrywanie zdjęć i eksport
-ZIP w panelu admina (foldery per zadanie). Zweryfikowane na telefonie.
+Jest wszystko z v0.5 (gra, galeria) — oraz odporność (v0.6): kolejka offline
+w IndexedDB z retry (zdjęcie zrobione bez zasięgu czeka i wysyła się samo,
+gdy sieć wróci), rate limit 30/min per IP na uploadzie, twardy limit 1000
+zdjęć łącznie. Zweryfikowane na telefonie w trybie samolotowym.
 
-Nie ma jeszcze: kolejki offline i backupu (v0.6), Cloudflare Tunnel/domeny (v1.0).
+Backup na drugi nośnik świadomie pominięty — brak dostępnego drugiego dysku.
+Ryzyko: awaria jedynego SSD = utrata zdjęć. Do rewizji, jeśli pojawi się
+zapasowy nośnik przed weselem.
+
+Nie ma jeszcze: Cloudflare Tunnel/domeny/HTTPS/QR (v1.0).

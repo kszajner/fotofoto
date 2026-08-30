@@ -4,12 +4,17 @@ import path from 'node:path';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
+import fastifyRateLimit from '@fastify/rate-limit';
+
 import { getDb } from '../db/index.js';
 import { paths } from '../config.js';
 import { COOKIE_NAME } from './guest.js';
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
 const MAX_SUBMISSIONS_PER_GUEST_PER_DAY = 100;
+// Twardy sufit na miejsce na dysku — przy ~700KB/zdjęcie (średnia z realnych
+// testów) to maks. ~700MB. Bez tego 100/gość/dobę × wielu gości nie ma góry.
+const MAX_TOTAL_PHOTOS = 1000;
 
 const MAGIC = [
   [0xff, 0xd8, 0xff], // jpeg
@@ -42,6 +47,28 @@ function currentGuest(req, db) {
 }
 
 export default async function submissionRoutes(app) {
+  // Per-IP, nie per-gość — jeden telefon może mieć wielu gości za NAT-em
+  // (dom weselny, jedno Wi-Fi), ale też jeden zepsuty klient nie zaleje
+  // serwera. Reszta endpointów dostanie ochronę od Cloudflare w v1.0.
+  await app.register(fastifyRateLimit, {
+    max: 30,
+    timeWindow: '1 minute',
+    // errorResponseBuilder trafia do `throw` w pluginie — zwykły obiekt bez
+    // statusCode ląduje jako 500, nie 429. Musi być Error z ustawionym polem.
+    errorResponseBuilder: (_req, context) => {
+      const err = new Error('zbyt wiele żądań — poczekaj chwilę i spróbuj ponownie');
+      err.statusCode = context.statusCode;
+      return err;
+    },
+  });
+
+  // Plugin rate-limit rzuca Error, który fastify domyślnie serializuje jako
+  // {statusCode,error:"Too Many Requests",message}. Reszta API w tym
+  // projekcie zawsze zwraca {error}, więc ujednolicamy tylko dla tego pliku.
+  app.setErrorHandler((err, req, reply) => {
+    reply.code(err.statusCode ?? 500).send({ error: err.message });
+  });
+
   app.post('/api/submissions', async (req, reply) => {
     const db = getDb();
     const guest = currentGuest(req, db);
@@ -80,6 +107,11 @@ export default async function submissionRoutes(app) {
       .prepare('SELECT id FROM submissions WHERE id = ? AND guest_id = ?')
       .get(req.params.id, guest.id);
     if (!submission) return reply.code(404).send({ error: 'nieznane zgłoszenie' });
+
+    const { n: totalPhotos } = db.prepare('SELECT count(*) AS n FROM photos').get();
+    if (totalPhotos >= MAX_TOTAL_PHOTOS) {
+      return reply.code(507).send({ error: 'osiągnięto limit miejsca — daj znać organizatorom' });
+    }
 
     let data;
     try {

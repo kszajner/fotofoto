@@ -4,6 +4,7 @@ const guestBarEl = document.querySelector('#guest-bar');
 
 const RESIZE_MAX_DIM = 2048;
 const JPEG_QUALITY = 0.82;
+const QUEUE_RETRY_MS = 20000;
 
 let guest = null;
 
@@ -12,6 +13,111 @@ function stateMessage(text) {
   p.className = 'state';
   p.textContent = text;
   return p;
+}
+
+// Błąd HTTP jawnie zwrócony przez serwer (400/413/415/507/...) — nie ma co
+// ponawiać, bo kolejny raz da ten sam wynik. Odróżniamy od TypeError, które
+// fetch rzuca przy realnym braku sieci — to jedyny przypadek, który kolejkujemy.
+class HttpError extends Error {}
+
+const QUEUE_DB_NAME = 'fotofoto-queue';
+const QUEUE_STORE = 'pending';
+
+function openQueueDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(QUEUE_DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(QUEUE_STORE, { keyPath: 'id', autoIncrement: true });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function queueAdd(item) {
+  const db = await openQueueDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(QUEUE_STORE, 'readwrite');
+    tx.objectStore(QUEUE_STORE).add(item);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function queueGetAll() {
+  const db = await openQueueDb();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(QUEUE_STORE, 'readonly').objectStore(QUEUE_STORE).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function queueDelete(id) {
+  const db = await openQueueDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(QUEUE_STORE, 'readwrite');
+    tx.objectStore(QUEUE_STORE).delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// Rzuca HttpError na jawną odpowiedź serwera, zwykły TypeError przechodzi
+// dalej niezmieniony (to sygnał "brak sieci", nie "serwer odmówił").
+async function trySend(taskId, jpegBlob) {
+  const subRes = await fetch('/api/submissions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ task_id: taskId }),
+  });
+  if (!subRes.ok) {
+    const body = await subRes.json().catch(() => ({}));
+    throw new HttpError(body.error ?? `HTTP ${subRes.status}`);
+  }
+  const { submission_id } = await subRes.json();
+
+  const form = new FormData();
+  form.append('photo', jpegBlob, 'photo.jpg');
+  const photoRes = await fetch(`/api/submissions/${submission_id}/photos`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!photoRes.ok) {
+    const body = await photoRes.json().catch(() => ({}));
+    throw new HttpError(body.error ?? `HTTP ${photoRes.status}`);
+  }
+}
+
+function markTaskDone(taskId) {
+  const card = tasksEl.querySelector(`[data-task-id="${taskId}"]`);
+  if (!card) return;
+  card.querySelector('.shoot-btn').hidden = true;
+  card.querySelector('.queued-row').hidden = true;
+  card.querySelector('.done-row').hidden = false;
+}
+
+// Wywoływane przy starcie, po powrocie sieci ('online') i co QUEUE_RETRY_MS
+// jako siatka bezpieczeństwa — telefony potrafią nie odpalić 'online'
+// niezawodnie. Błąd serwera (HttpError) porzuca wpis: ponawianie i tak
+// da ten sam wynik (np. zadanie usunięte w międzyczasie).
+async function flushQueue() {
+  let items;
+  try {
+    items = await queueGetAll();
+  } catch {
+    return;
+  }
+  for (const item of items) {
+    try {
+      await trySend(item.taskId, item.blob);
+      await queueDelete(item.id);
+      markTaskDone(item.taskId);
+    } catch (err) {
+      if (err instanceof HttpError) await queueDelete(item.id);
+      // TypeError (brak sieci) — zostawiamy w kolejce, spróbujemy później
+    }
+  }
 }
 
 // Canvas → JPEG ~2048px / q0.82: rozwiązuje transfer, obciążenie CPU Pi
@@ -100,6 +206,7 @@ function renderGuestBar() {
 function taskCard(task) {
   const article = document.createElement('article');
   article.className = 'task';
+  article.dataset.taskId = String(task.id);
 
   const title = document.createElement('h2');
   title.textContent = task.title;
@@ -139,6 +246,11 @@ function taskCard(task) {
 
   done.append(doneBadge, redo);
 
+  const queuedRow = document.createElement('p');
+  queuedRow.className = 'queued-row';
+  queuedRow.textContent = 'Brak zasięgu — w kolejce, wyślę automatycznie 📶';
+  queuedRow.hidden = true;
+
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -156,45 +268,59 @@ function taskCard(task) {
     status.classList.remove('error');
     status.textContent = 'Przygotowuję zdjęcie…';
 
+    let jpeg;
     try {
-      const jpeg = await resizeToJpeg(file);
-
-      status.textContent = 'Wysyłam…';
-      const subRes = await fetch('/api/submissions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task_id: task.id }),
-      });
-      if (!subRes.ok) {
-        const body = await subRes.json().catch(() => ({}));
-        throw new Error(body.error ?? `HTTP ${subRes.status}`);
-      }
-      const { submission_id } = await subRes.json();
-
-      const form = new FormData();
-      form.append('photo', jpeg, 'photo.jpg');
-      const photoRes = await fetch(`/api/submissions/${submission_id}/photos`, {
-        method: 'POST',
-        body: form,
-      });
-      if (!photoRes.ok) {
-        const body = await photoRes.json().catch(() => ({}));
-        throw new Error(body.error ?? `HTTP ${photoRes.status}`);
-      }
-
-      status.textContent = 'Wysłano! Dzięki 🎉';
-      label.hidden = true;
-      done.hidden = false;
+      jpeg = await resizeToJpeg(file);
     } catch (err) {
       status.classList.add('error');
-      status.textContent = `Nie udało się: ${err.message}`;
+      status.textContent = `Nie udało się przygotować zdjęcia: ${err.message}`;
+      label.removeAttribute('aria-disabled');
+      return;
+    }
+
+    status.textContent = 'Wysyłam…';
+    try {
+      await trySend(task.id, jpeg);
+      status.hidden = true;
+      label.hidden = true;
+      queuedRow.hidden = true;
+      done.hidden = false;
+    } catch (err) {
+      if (err instanceof HttpError) {
+        status.classList.add('error');
+        status.textContent = `Nie udało się: ${err.message}`;
+      } else {
+        // Brak sieci (TypeError z fetch) — zdjęcie już jest w canvas/JPEG,
+        // nie tracimy go: idzie do IndexedDB, wyśle się automatycznie.
+        await queueAdd({ taskId: task.id, blob: jpeg, createdAt: Date.now() });
+        status.hidden = true;
+        label.hidden = true;
+        queuedRow.hidden = false;
+      }
     } finally {
       label.removeAttribute('aria-disabled');
     }
   });
 
-  article.append(title, desc, points, label, done, status);
+  article.append(title, desc, points, label, done, queuedRow, status);
   return article;
+}
+
+// Po reloadzie strony trzeba odtworzyć wizualny stan "w kolejce" z tego,
+// co faktycznie leży w IndexedDB — sam task.done z serwera o tym nie wie.
+async function applyQueuedState() {
+  let items;
+  try {
+    items = await queueGetAll();
+  } catch {
+    return;
+  }
+  for (const taskId of new Set(items.map((i) => i.taskId))) {
+    const card = tasksEl.querySelector(`[data-task-id="${taskId}"]`);
+    if (!card || !card.querySelector('.done-row').hidden) continue;
+    card.querySelector('.shoot-btn').hidden = true;
+    card.querySelector('.queued-row').hidden = false;
+  }
 }
 
 async function loadTasks() {
@@ -206,6 +332,8 @@ async function loadTasks() {
     tasksEl.replaceChildren(
       ...(tasks.length ? tasks.map(taskCard) : [stateMessage('Brak aktywnych zadań.')]),
     );
+    await applyQueuedState();
+    flushQueue();
   } catch (err) {
     tasksEl.replaceChildren(stateMessage(`Nie udało się pobrać zadań: ${err.message}`));
   } finally {
@@ -236,6 +364,9 @@ async function boot() {
   tasksEl.hidden = false;
   loadTasks();
 }
+
+window.addEventListener('online', flushQueue);
+setInterval(flushQueue, QUEUE_RETRY_MS);
 
 boot();
 loadBuild();

@@ -146,13 +146,59 @@ Hasło do `/admin` (dev i produkcja) ustawione na "ricky" na czas testów —
 **do zmiany na coś mocniejszego przed v1.0**, kiedy panel wyjdzie do internetu
 przez Cloudflare Tunnel. Tag `v0.5.0`, deploy na Pi.
 
+## v0.6 w toku — 2026-08-30
+
+- [x] Twardy limit **1000 zdjęć łącznie** (`MAX_TOTAL_PHOTOS` w `submissions.js`) —
+      507 przy przekroczeniu. Decyzja użytkownika: prosty limit liczby zamiast
+      liczenia wolnego miejsca na dysku (statvfs) — wystarczające na skalę wesela.
+- [x] Rate limit per IP na `/api/submissions*` (`@fastify/rate-limit`, 30/min) —
+      **bug po drodze**: `errorResponseBuilder` zwracający zwykły obiekt trafia
+      w pluginie do `throw`, więc bez `statusCode` na obiekcie fastify dawał 500,
+      nie 429. Naprawione zwracaniem `Error` z ustawionym `.statusCode`. Dodatkowo
+      pole `error` w body domyślnie brzmiało "Too Many Requests" (angielski
+      boilerplate fastify) zamiast polskiego komunikatu z `message` — ujednolicone
+      lokalnym `setErrorHandler` w `submissions.js`.
+- [x] Kolejka offline w IndexedDB (`public/app.js`): `fetch` rzucający `TypeError`
+      (brak sieci) trafia do kolejki zamiast gubić zdjęcie; jawny błąd serwera
+      (`HttpError`) pokazuje się od razu, bez sensu w kolejkowaniu. Retry: przy
+      starcie, na event `online`, i co 20s jako siatka bezpieczeństwa (telefony
+      nie zawsze rzetelnie odpalają `online`). Stan "w kolejce" przeżywa reload
+      strony (`applyQueuedState()` czyta IndexedDB przy starcie).
+- [ ] Backup na drugi nośnik (cron) — **do ustalenia z użytkownikiem, jaki
+      nośnik jest dostępny** zanim to zakoduję (drugi dysk? chmura? nic jeszcze?).
+
+### Bug zgłoszony przez użytkownika po teście — 2026-08-30
+
+"Brak zasięgu" i "Zrobione" pokazywały się na **wszystkich** kartach zadań
+naraz, cały czas, niezależnie od stanu. Przyczyna: `.done-row`, `.queued-row`
+i `.shoot-btn` (ten ostatni od v0.4) mają jawny `display:` w CSS — przy
+takiej samej specyficzności jak domyślna reguła przeglądarki `[hidden]
+{display:none}`, wygrywa reguła autora (czyli nasza), więc atrybut `hidden`
+ustawiany z JS-a był całkowicie ignorowany. To był bug od v0.4, niezauważony
+bo test dotykał tylko jednej karty na raz.
+
+Naprawione jedną regułą globalną `[hidden] { display: none !important; }`
+w `public/style.css` i defensywnie w `admin/style.css` (ten sam wzorzec,
+jeszcze nieujawniony, ale to ta sama pułapka) — rozwiązuje to też ukryty
+wcześniej bug w `.load-more` na `/feed.html` (przycisk był zawsze widoczny
+nawet przy pustym feedzie).
+
+### v0.6 zamknięte — 2026-08-30
+
+Retest po poprawce CSS przeszedł idealnie: tylko właściwa karta zmienia
+stan, offline queue działa (offline → "w kolejce" → online → auto-wysyłka).
+
+Backup na drugi nośnik świadomie odpuszczony — użytkownik nie ma zapasowego
+dysku. Zaakceptowane ryzyko: awaria jedynego SSD = utrata wszystkich zdjęć.
+Zapisane w README jako otwarte ryzyko do rewizji, gdyby pojawił się drugi
+nośnik przed weselem. Tag `v0.6.0`, deploy na Pi.
+
 ## Następny krok
 
-v0.6 z planu (ARCHITECTURE.md §7): odporność — kolejka offline w IndexedDB
-+ retry (na wypadek słabego zasięgu), rate limity per IP, cron backup na
-drugi nośnik. To też moment, żeby dorzucić realny rate limit uploadu, o który
-pytał użytkownik przy v0.4 (dziś: 20MB/plik + 100 zgłoszeń/gość/dobę, bez
-limitu per IP i bez twardego capa na miejsce na dysku).
+v1.0 z planu (ARCHITECTURE.md §7): Cloudflare Tunnel, domena, HTTPS, kod QR,
+test obciążeniowy, próba generalna z 5 osobami na prawdziwych telefonach.
+To ostatnia wersja przed weselem (3.10.2026) — wymaga decyzji użytkownika:
+nazwa domeny (do kupienia) i czy ma/chce konto Cloudflare.
 
 ## Jak przetestować z telefonu (do zrobienia przez Ciebie)
 

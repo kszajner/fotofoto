@@ -22,6 +22,14 @@
   box-sizing: border-box;
 }
 
+/* Klasy typu .done-row/.shoot-btn/.load-more ustawiają własny `display` —
+   bez tego bicie z atrybutem `hidden` jest nierozstrzygnięte przez
+   specyficzność (obie reguły to 0,1,0), więc wygrywa kolejność w arkuszu,
+   nie intencja JS-a. !important wymusza, że hidden zawsze wygrywa. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   padding: 0 1.25rem 3rem;
@@ -173,6 +181,16 @@ body {
   color: #4a8f5c;
   font-size: 0.8125rem;
   font-weight: 600;
+}
+
+.queued-row {
+  margin: 0.9rem 0 0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  display: inline-block;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-size: 0.8125rem;
 }
 
 .redo-btn {
