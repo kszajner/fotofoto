@@ -193,12 +193,32 @@ dysku. Zaakceptowane ryzyko: awaria jedynego SSD = utrata wszystkich zdjęć.
 Zapisane w README jako otwarte ryzyko do rewizji, gdyby pojawił się drugi
 nośnik przed weselem. Tag `v0.6.0`, deploy na Pi.
 
+## Produkcja wyłączona — 2026-08-30
+
+Apka nie musi chodzić aż do ok. 25 września 2026 (przed weselem 3.10.2026).
+Usługa `fotofoto` zatrzymana i wyłączona z autostartu:
+
+```
+sudo systemctl disable --now fotofoto
+```
+
+**Żeby wrócić do pracy** (bliżej 25 września albo przy dalszym developmencie):
+
+```
+sudo systemctl enable --now fotofoto
+curl http://127.0.0.1:3000/healthz   # powinno zwrócić {"ok":true,...}
+```
+
+Dane (`/srv/fotofoto/data`) i kod (`/srv/fotofoto/app`, tag v0.6.0) zostają
+nietknięte — wyłączenie usługi niczego nie kasuje.
+
 ## Następny krok
 
 v1.0 z planu (ARCHITECTURE.md §7): Cloudflare Tunnel, domena, HTTPS, kod QR,
 test obciążeniowy, próba generalna z 5 osobami na prawdziwych telefonach.
-To ostatnia wersja przed weselem (3.10.2026) — wymaga decyzji użytkownika:
-nazwa domeny (do kupienia) i czy ma/chce konto Cloudflare.
+To ostatnia wersja przed weselem — wymaga decyzji użytkownika: nazwa domeny
+(do kupienia) i czy ma/chce konto Cloudflare. Do podjęcia bliżej terminu,
+apka nie musi być live wcześniej.
 
 ## Jak przetestować z telefonu (do zrobienia przez Ciebie)
 
