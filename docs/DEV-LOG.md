@@ -212,13 +212,39 @@ curl http://127.0.0.1:3000/healthz   # powinno zwrócić {"ok":true,...}
 Dane (`/srv/fotofoto/data`) i kod (`/srv/fotofoto/app`, tag v0.6.0) zostają
 nietknięte — wyłączenie usługi niczego nie kasuje.
 
+## Redesign — 2026-08-30
+
+Użytkownik poprosił o mniej "generyczny" wygląd frontu gościa (dotychczasowy
+krem + terakota to dosłownie podręcznikowy "AI design"). Ustalony kierunek
+przez dwie iteracje makiety (Artifact) — pełna specyfikacja w `docs/DESIGN.md`:
+motyw instax (kwadratowe "zdjęcia" z grubą białą ramką), biel/czerń + jeden
+akcent (wino), inicjały "O × K", data ślubu jako plakietka w rogu.
+
+Wdrożone na `public/` (`index.html`, `style.css`, `app.js`, `feed.html`) —
+panel admina świadomie bez zmian, to narzędzie wewnętrzne. Zweryfikowane
+przez curl (CSS się serwuje, brak błędów składni), **czeka na wizualną
+weryfikację na telefonie** — Chromium headless na tym Pi się wiesza (znane
+z v0.3), więc realny test wymaga prawdziwego ekranu.
+
+Zweryfikowane na telefonie — działa dobrze. Dwie poprawki po pierwszym
+teście: akcent zmieniony z wina (`#6e2a34`) na ochrę (`#a8752c`), tryb ciemny
+usunięty całkowicie (nie tylko `prefers-color-scheme`). Dorzucona funkcja:
+po zrobieniu zdjęcia "klatka" pokazuje prawdziwe zdjęcie (natychmiast z bloba,
+po odświeżeniu z miniatury serwera przez nowe pole `photo_id` w `/api/tasks`).
+
+Redesign zamknięty, niewdrożony na produkcję (produkcja świadomie wyłączona
+do ~25 września — patrz wyżej). Zacommitowany i wypchnięty, gotowy do
+wdrożenia razem z v1.0 albo osobno, gdy produkcja wróci online.
+
 ## Następny krok
 
 v1.0 z planu (ARCHITECTURE.md §7): Cloudflare Tunnel, domena, HTTPS, kod QR,
-test obciążeniowy, próba generalna z 5 osobami na prawdziwych telefonach.
-To ostatnia wersja przed weselem — wymaga decyzji użytkownika: nazwa domeny
-(do kupienia) i czy ma/chce konto Cloudflare. Do podjęcia bliżej terminu,
-apka nie musi być live wcześniej.
+test obciążeniowy, próba generalna z 5 osobami. Wymaga decyzji użytkownika:
+nazwa domeny i konto Cloudflare — do podjęcia bliżej terminu.
+
+Do zrobienia przy najbliższej okazji, niezależnie od v1.0:
+- Włączyć produkcję (`sudo systemctl enable --now fotofoto`) i wdrożyć na niej
+  redesign (`./scripts/deploy.sh` — obecny stan repo, jeszcze bez nowego tagu).
 
 ## Jak przetestować z telefonu (do zrobienia przez Ciebie)
 

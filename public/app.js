@@ -89,9 +89,14 @@ async function trySend(taskId, jpegBlob) {
   }
 }
 
-function markTaskDone(taskId) {
+function markTaskDone(taskId, blob) {
   const card = tasksEl.querySelector(`[data-task-id="${taskId}"]`);
   if (!card) return;
+  card.classList.add('done');
+  card.querySelector('.frame-no').hidden = true;
+  const img = card.querySelector('.photo-img');
+  img.src = URL.createObjectURL(blob);
+  img.hidden = false;
   card.querySelector('.shoot-btn').hidden = true;
   card.querySelector('.queued-row').hidden = true;
   card.querySelector('.done-row').hidden = false;
@@ -112,7 +117,7 @@ async function flushQueue() {
     try {
       await trySend(item.taskId, item.blob);
       await queueDelete(item.id);
-      markTaskDone(item.taskId);
+      markTaskDone(item.taskId, item.blob);
     } catch (err) {
       if (err instanceof HttpError) await queueDelete(item.id);
       // TypeError (brak sieci) — zostawiamy w kolejce, spróbujemy później
@@ -203,10 +208,52 @@ function renderGuestBar() {
   guestBarEl.replaceChildren(p);
 }
 
-function taskCard(task) {
+// frameNo to numer klatki na "rolce" (pozycja w liście, 1-indeksowana) —
+// czysto wizualne, nie ma związku z id zadania w bazie.
+function taskCard(task, frameNo) {
   const article = document.createElement('article');
   article.className = 'task';
   article.dataset.taskId = String(task.id);
+  article.classList.toggle('done', Boolean(task.done));
+
+  const photoArea = document.createElement('div');
+  photoArea.className = 'photo-area';
+
+  const frameLabel = document.createElement('span');
+  frameLabel.className = 'frame-no';
+  frameLabel.textContent = String(frameNo).padStart(2, '0');
+
+  const checkmark = document.createElement('span');
+  checkmark.className = 'checkmark';
+  checkmark.textContent = '✓';
+  checkmark.hidden = true;
+
+  const photoImg = document.createElement('img');
+  photoImg.className = 'photo-img';
+  photoImg.alt = '';
+  photoImg.hidden = true;
+
+  photoArea.append(frameLabel, checkmark, photoImg);
+
+  // Pokazuje prawdziwe zdjęcie w "klatce" zamiast placeholdera — z URL-a
+  // (miniatura z serwera) albo bezpośrednio z bloba (świeżo zrobione zdjęcie,
+  // zanim worker zdąży wygenerować miniaturę — zero czekania na feedback).
+  function showPhoto(url) {
+    frameLabel.hidden = true;
+    checkmark.hidden = true;
+    photoImg.src = url;
+    photoImg.hidden = false;
+  }
+
+  if (task.done && task.photo_id) {
+    showPhoto(`/media/thumb/${task.photo_id}.webp`);
+  } else if (task.done) {
+    frameLabel.hidden = true;
+    checkmark.hidden = false;
+  }
+
+  const caption = document.createElement('div');
+  caption.className = 'caption';
 
   const title = document.createElement('h2');
   title.textContent = task.title;
@@ -216,7 +263,7 @@ function taskCard(task) {
 
   const points = document.createElement('span');
   points.className = 'pts';
-  points.textContent = task.points === 1 ? '1 punkt' : `${task.points} pkt`;
+  points.textContent = task.points === 1 ? '1 pkt' : `${task.points} pkt`;
 
   const status = stateMessage('');
   status.className = 'upload-status';
@@ -233,13 +280,17 @@ function taskCard(task) {
 
   const doneBadge = document.createElement('span');
   doneBadge.className = 'done-badge';
-  doneBadge.textContent = 'Zrobione ✓';
+  doneBadge.textContent = 'wywołane!';
 
   const redo = document.createElement('button');
   redo.type = 'button';
   redo.className = 'redo-btn';
   redo.textContent = 'jeszcze raz';
   redo.addEventListener('click', () => {
+    article.classList.remove('done');
+    frameLabel.hidden = false;
+    checkmark.hidden = true;
+    photoImg.hidden = true;
     done.hidden = true;
     label.hidden = false;
   });
@@ -248,8 +299,12 @@ function taskCard(task) {
 
   const queuedRow = document.createElement('p');
   queuedRow.className = 'queued-row';
-  queuedRow.textContent = 'Brak zasięgu — w kolejce, wyślę automatycznie 📶';
+  queuedRow.textContent = 'w kolejce — brak zasięgu 📶';
   queuedRow.hidden = true;
+
+  const captionFoot = document.createElement('div');
+  captionFoot.className = 'caption-foot';
+  captionFoot.append(points, label, done, queuedRow);
 
   const input = document.createElement('input');
   input.type = 'file';
@@ -285,6 +340,8 @@ function taskCard(task) {
       label.hidden = true;
       queuedRow.hidden = true;
       done.hidden = false;
+      article.classList.add('done');
+      showPhoto(URL.createObjectURL(jpeg));
     } catch (err) {
       if (err instanceof HttpError) {
         status.classList.add('error');
@@ -302,7 +359,8 @@ function taskCard(task) {
     }
   });
 
-  article.append(title, desc, points, label, done, queuedRow, status);
+  caption.append(title, desc, captionFoot, status);
+  article.append(photoArea, caption);
   return article;
 }
 
@@ -330,7 +388,9 @@ async function loadTasks() {
 
     const tasks = await res.json();
     tasksEl.replaceChildren(
-      ...(tasks.length ? tasks.map(taskCard) : [stateMessage('Brak aktywnych zadań.')]),
+      ...(tasks.length
+        ? tasks.map((task, i) => taskCard(task, i + 1))
+        : [stateMessage('Brak aktywnych zadań.')]),
     );
     await applyQueuedState();
     flushQueue();
